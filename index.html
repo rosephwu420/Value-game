@@ -116,14 +116,14 @@
 
         // --- Firebase 配置 ---
         // !!!!! 重要 !!!!!
-        // 請將下方的大括號 {} 內容，換成你自己在 Firebase 專案設定中複製的 firebaseConfig 物件
+        // 請將下方整個 firebaseConfig 物件，換成你在 Firebase 專案設定中複製的完整內容
         const firebaseConfig = {
-            apiKey: "請貼上你的-API-KEY",
-            authDomain: "請貼上你的-authDomain",
-            projectId: "請貼上你的-projectId",
-            storageBucket: "請貼上你的-storageBucket",
-            messagingSenderId: "請貼上你的-messagingSenderId",
-            appId: "請貼上你的-appId"
+          apiKey: "AIzaSyDz1xdAb8piSTqOjkexZLcJMg3E7z_Ewfc",
+          authDomain: "valuegame123.firebaseapp.com",
+          projectId: "valuegame123", // 根據你的截圖，這個是正確的
+          storageBucket: "valuegame123.appspot.com", // 請在Firebase Config中確認這個值
+          messagingSenderId: "312976135901", // 請在Firebase Config中確認這個值
+          appId: "1:312976135901:web:xxxxxxxxxxxxxx" // 請在Firebase Config中確認這個值
         };
         
         // 初始化 Firebase
@@ -408,31 +408,4 @@
     </script>
 </body>
 </html>
-```
-
----
-
-#### **第二步：【非常重要】更新你的 Firestore 安全規則**
-
-這是最關鍵的一步。請按照以下指引操作：
-
-1.  **進入 Firebase 控制台**，選擇你的專案。
-2.  在左邊的選單中，點擊「建構」(Build)，然後選擇 **「Firestore Database」**。
-3.  在 Firestore 頁面頂部的導覽列中，點擊 **「規則」(Rules)** 分頁。
-4.  你會看到一個編輯器，裡面有目前的規則。**請刪除裡面所有的內容**。
-5.  將下面這段新的規則**完整地複製並貼上**到編輯器中：
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // 允許任何已登入 (包括匿名登入) 的使用者讀取和寫入 auction_items 和 auction_groups
-    match /auction_items/{item} {
-      allow read, write: if request.auth != null;
-    }
-    match /auction_groups/{group} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
 
