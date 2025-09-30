@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roseph Made - 我的 Canvas 遊戲</title>
+    <link rel="stylesheet" href="style.css"> 
+    
+    <style>
+        /* 這裡可以放一些基本的樣式，讓 Canvas 居中 */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0; /* 可選：讓背景有點顏色 */
+        }
+        canvas {
+            border: 1px solid black;
+            display: block; /* 移除 Canvas 下方可能有的空白 */
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="myGameCanvas" width="800" height="600"></canvas>
+
+    <script src="your_game_logic.js"></script>
+
+</body>
+</html>
