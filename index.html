@@ -111,17 +111,29 @@
     <script type="module">
         // 導入 Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, writeBatch, getDocs, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase 配置 (生產環境中應保密) ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-auction-app';
-
+        // --- Firebase 配置 ---
+        // !!!!! 重要 !!!!!
+        // 請將下方的大括號 {} 內容，換成你自己在 Firebase 專案設定中複製的 firebaseConfig 物件
+        const firebaseConfig = {
+            apiKey: "請貼上你的-API-KEY",
+            authDomain: "請貼上你的-authDomain",
+            projectId: "請貼上你的-projectId",
+            storageBucket: "請貼上你的-storageBucket",
+            messagingSenderId: "請貼上你的-messagingSenderId",
+            appId: "請貼上你的-appId"
+        };
+        
         // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- 數據庫路徑 (簡化後) ---
+        const itemsCollectionRef = collection(db, `auction_items`);
+        const groupsCollectionRef = collection(db, `auction_groups`);
 
         // --- 全局變數和靜態數據 ---
         const valuesData = [
@@ -149,8 +161,6 @@
         const resetBtn = document.getElementById('reset-game-btn');
 
         // --- 核心函數 ---
-
-        // 顯示提示訊息
         function showToast(message) {
             toastMessageEl.textContent = message;
             toastEl.classList.remove('toast-hide');
@@ -161,35 +171,22 @@
             }, 3000);
         }
 
-        // 初始化或重設遊戲數據
         async function initializeGameData() {
             const batch = writeBatch(db);
-            const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/auction_items`);
-            
             valuesData.forEach(name => {
                 const itemRef = doc(itemsCollectionRef, name);
-                batch.set(itemRef, {
-                    name: name,
-                    currentBid: 0,
-                    highestBidder: '無',
-                    sold: false
-                });
+                batch.set(itemRef, { name, currentBid: 0, highestBidder: '無', sold: false });
             });
             await batch.commit();
             
-            // 刪除所有舊的組別數據
-            const groupsQuery = query(collection(db, `artifacts/${appId}/public/data/auction_groups`));
-            const groupsSnapshot = await getDocs(groupsQuery);
+            const groupsSnapshot = await getDocs(groupsCollectionRef);
             const deleteBatch = writeBatch(db);
-            groupsSnapshot.forEach(doc => {
-                deleteBatch.delete(doc.ref);
-            });
+            groupsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
             await deleteBatch.commit();
 
             alert('遊戲已成功重設！');
         }
 
-        // 加入遊戲
         async function joinGame() {
             const groupName = groupNameInput.value.trim();
             if (!groupName) {
@@ -198,27 +195,14 @@
             }
             currentGroup.name = groupName;
 
-            // 自動檢查並初始化拍賣品 (如果不存在)
-            const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/auction_items`);
             const itemsSnapshot = await getDocs(itemsCollectionRef);
             if (itemsSnapshot.empty) {
                 console.log("拍賣品不存在，正在自動初始化...");
-                const batch = writeBatch(db);
-                valuesData.forEach(name => {
-                    const itemRef = doc(itemsCollectionRef, name);
-                    batch.set(itemRef, {
-                        name: name,
-                        currentBid: 0,
-                        highestBidder: '無',
-                        sold: false
-                    });
-                });
-                await batch.commit();
-                 console.log("初始化完成!");
+                await initializeGameData();
+                console.log("初始化完成!");
             }
 
-            // 檢查組別是否已存在
-            const groupRef = doc(db, `artifacts/${appId}/public/data/auction_groups`, groupName);
+            const groupRef = doc(groupsCollectionRef, groupName);
             const groupSnap = await getDoc(groupRef);
 
             if (groupSnap.exists()) {
@@ -228,7 +212,6 @@
                 currentGroup.budget = 1000;
             }
 
-            // 更新UI並開始遊戲
             loginScreen.classList.add('hidden');
             gameContainer.classList.remove('hidden');
             groupNameDisplay.textContent = `組別: ${currentGroup.name}`;
@@ -238,7 +221,6 @@
             listenToGroupUpdates();
         }
 
-        // 渲染價值觀卡片
         function renderItems(items) {
             valuesGridEl.innerHTML = '';
             items.forEach(item => {
@@ -267,12 +249,9 @@
             });
         }
         
-        // 監聽所有物品的實時更新
         function listenToItemUpdates() {
-            const itemsRef = collection(db, `artifacts/${appId}/public/data/auction_items`);
-            if (unsubscribeItems) unsubscribeItems(); // 如果已有監聽，先取消
-            
-            unsubscribeItems = onSnapshot(itemsRef, (snapshot) => {
+            if (unsubscribeItems) unsubscribeItems();
+            unsubscribeItems = onSnapshot(itemsCollectionRef, (snapshot) => {
                 const items = [];
                 snapshot.forEach(doc => items.push(doc.data()));
                 items.sort((a, b) => valuesData.indexOf(a.name) - valuesData.indexOf(b.name));
@@ -280,9 +259,8 @@
             });
         }
 
-        // 監聽當前組別的數據更新 (例如預算)
         function listenToGroupUpdates() {
-             const groupRef = doc(db, `artifacts/${appId}/public/data/auction_groups`, currentGroup.name);
+             const groupRef = doc(groupsCollectionRef, currentGroup.name);
              onSnapshot(groupRef, (doc) => {
                  if(doc.exists()){
                      currentGroup.budget = doc.data().budget;
@@ -291,7 +269,6 @@
              });
         }
 
-        // 打開出價視窗
         function openBiddingModal(item) {
             activeItemId = item.name;
             document.getElementById('modal-item-name').textContent = item.name;
@@ -302,7 +279,6 @@
             biddingModal.classList.remove('hidden');
         }
 
-        // 提交出價
         async function placeBid() {
             const bidInput = document.getElementById('bid-input');
             const newBid = parseInt(bidInput.value);
@@ -312,7 +288,7 @@
                 return;
             }
 
-            const itemRef = doc(db, `artifacts/${appId}/public/data/auction_items`, activeItemId);
+            const itemRef = doc(itemsCollectionRef, activeItemId);
             const itemSnap = await getDoc(itemRef);
             const currentItem = itemSnap.data();
 
@@ -321,7 +297,6 @@
                 return;
             }
             
-            // 計算真實預算 (加上之前最高出價的金額，如果最高出價者是自己)
             let availableBudget = currentGroup.budget;
             if(currentItem.highestBidder === currentGroup.name){
                 availableBudget += currentItem.currentBid;
@@ -332,19 +307,14 @@
                 return;
             }
 
-            // 使用 Batch Write 確保數據一致性
             const batch = writeBatch(db);
-
-            // 1. 更新物品狀態
             batch.update(itemRef, { currentBid: newBid, highestBidder: currentGroup.name });
 
-            // 2. 扣除新出價者的預算
-            const currentGroupRef = doc(db, `artifacts/${appId}/public/data/auction_groups`, currentGroup.name);
+            const currentGroupRef = doc(groupsCollectionRef, currentGroup.name);
             batch.update(currentGroupRef, { budget: availableBudget - newBid });
 
-            // 3. 如果之前有最高出價者，退還其預算
             if (currentItem.highestBidder !== '無' && currentItem.highestBidder !== currentGroup.name) {
-                const previousBidderRef = doc(db, `artifacts/${appId}/public/data/auction_groups`, currentItem.highestBidder);
+                const previousBidderRef = doc(groupsCollectionRef, currentItem.highestBidder);
                 const previousBidderSnap = await getDoc(previousBidderRef);
                 if (previousBidderSnap.exists()) {
                     const previousBidderBudget = previousBidderSnap.data().budget;
@@ -356,12 +326,8 @@
             biddingModal.classList.add('hidden');
         }
         
-        // 顯示總結報告
         async function showSummary() {
-            const groupsRef = collection(db, `artifacts/${appId}/public/data/auction_groups`);
-            const itemsRef = collection(db, `artifacts/${appId}/public/data/auction_items`);
-
-            const [groupsSnap, itemsSnap] = await Promise.all([getDocs(groupsRef), getDocs(itemsRef)]);
+            const [groupsSnap, itemsSnap] = await Promise.all([getDocs(groupsCollectionRef), getDocs(itemsCollectionRef)]);
             
             const groupData = {};
             groupsSnap.forEach(doc => {
@@ -370,7 +336,7 @@
 
             itemsSnap.forEach(doc => {
                 const item = doc.data();
-                if (item.sold || (item.currentBid > 0 && item.highestBidder !== '無')) { // 將有出價的都視為"售出"
+                if (item.sold || (item.currentBid > 0 && item.highestBidder !== '無')) {
                     if(groupData[item.highestBidder]){
                         groupData[item.highestBidder].ownedItemsData.push(item);
                     }
@@ -382,7 +348,7 @@
 
             for (const groupName in groupData) {
                 const group = groupData[groupName];
-                group.ownedItemsData.sort((a,b) => b.currentBid - a.currentBid); // 按價格排序
+                group.ownedItemsData.sort((a,b) => b.currentBid - a.currentBid);
                 
                 let itemsHtml = group.ownedItemsData.map(item => 
                     `<li class="flex justify-between text-sm"><span>${item.name}</span> <span class="font-semibold">$${item.currentBid}</span></li>`
@@ -425,13 +391,8 @@
         // --- Firebase 登入 ---
         async function firebaseSignIn() {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                    console.log("Custom token 登入成功!");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("匿名登入成功!");
-                }
+                await signInAnonymously(auth);
+                console.log("匿名登入成功!");
                 joinBtn.disabled = false;
                 joinBtn.textContent = '加入拍賣會';
                 resetBtn.disabled = false;
@@ -447,5 +408,31 @@
     </script>
 </body>
 </html>
+```
 
+---
+
+#### **第二步：【非常重要】更新你的 Firestore 安全規則**
+
+這是最關鍵的一步。請按照以下指引操作：
+
+1.  **進入 Firebase 控制台**，選擇你的專案。
+2.  在左邊的選單中，點擊「建構」(Build)，然後選擇 **「Firestore Database」**。
+3.  在 Firestore 頁面頂部的導覽列中，點擊 **「規則」(Rules)** 分頁。
+4.  你會看到一個編輯器，裡面有目前的規則。**請刪除裡面所有的內容**。
+5.  將下面這段新的規則**完整地複製並貼上**到編輯器中：
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 允許任何已登入 (包括匿名登入) 的使用者讀取和寫入 auction_items 和 auction_groups
+    match /auction_items/{item} {
+      allow read, write: if request.auth != null;
+    }
+    match /auction_groups/{group} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
 
