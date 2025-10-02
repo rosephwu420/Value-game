@@ -114,18 +114,17 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, writeBatch, getDocs, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase 配置 ---
-        // !!!!! 最重要的一步 !!!!!
-        // 請將下面這一整段 `const firebaseConfig = { ... };` 程式碼，
-        // 完整地換成你在 Firebase 專案設定中複製的那一段。
+       // --- Firebase 配置 ---
+        // !!!!! 重要 !!!!!
+        // 請將下方整個 firebaseConfig 物件，換成你在 Firebase 專案設定中複製的完整內容
         const firebaseConfig = {
-          apiKey: "AIzaSyABC...…...", // 換成你的
-          authDomain: "your-project-id.firebaseapp.com", // 換成你的
-          projectId: "your-project-id", // 換成你的
-          storageBucket: "your-project-id.appspot.com", // 換成你的
-          messagingSenderId: "1234567890", // 換成你的
-          appId: "1:1234567890:web:abcdef123456" // 換成你的
-        };
+          apiKey: "AIzaSyDz1xdAb8piSTqOjkexZLcJMg3E7z_Ewfc",
+          authDomain: "valuegame123.firebaseapp.com",
+          projectId: "valuegame123",
+          storageBucket: "valuegame123.appspot.com",
+          messagingSenderId: "312976135901",
+          appId: "1:312976135901:web:xxxxxxxxxxxxxx" // 這裡應該是你在 Firebase 找到的真實 appId
+              };
         
         // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
@@ -423,4 +422,5 @@
     </script>
 </body>
 </html>
+
 
