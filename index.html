@@ -154,13 +154,17 @@
             // 你要複製的內容，應該包含 `apiKey`, `authDomain`, `projectId` 等所有項目。
             //
             // =======================================================================
-            const firebaseConfig = {
-              /* 請在這裡貼上你從 Firebase 網站複製的完整設定物件，
-                 它應該看起來像這樣：
-                 apiKey: "AIzaSy...",
-                 authDomain: "valuegame123.firebaseapp.com",
-                 projectId: "valuegame123",
-                 ... 等等
+          // --- Firebase 配置 ---
+        // !!!!! 重要 !!!!!
+        // 請將下方整個 firebaseConfig 物件，換成你在 Firebase 專案設定中複製的完整內容
+        const firebaseConfig = {
+          apiKey: "AIzaSyDz1xdAb8piSTqOjkexZLcJMg3E7z_Ewfc",
+          authDomain: "valuegame123.firebaseapp.com",
+          projectId: "valuegame123",
+          storageBucket: "valuegame123.appspot.com",
+          messagingSenderId: "312976135901",
+          appId: "1:312976135901:web:xxxxxxxxxxxxxx" // 這裡應該是你在 Firebase 找到的真實 appId
+        };
               */
             };
             // =======================================================================
@@ -441,4 +445,5 @@
     </script>
 </body>
 </html>
+
 
