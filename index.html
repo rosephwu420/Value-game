@@ -114,38 +114,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, writeBatch, getDocs, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-       // --- Firebase 配置 ---
-        // !!!!! 重要 !!!!!
-        // 請將下方整個 firebaseConfig 物件，換成你在 Firebase 專案設定中複製的完整內容
-        const firebaseConfig = {
-          apiKey: "AIzaSyDz1xdAb8piSTqOjkexZLcJMg3E7z_Ewfc",
-          authDomain: "valuegame123.firebaseapp.com",
-          projectId: "valuegame123",
-          storageBucket: "valuegame123.appspot.com",
-          messagingSenderId: "312976135901",
-          appId: "1:312976135901:web:xxxxxxxxxxxxxx" // 這裡應該是你在 Firebase 找到的真實 appId
-              };
-        
-        // 初始化 Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- 數據庫路徑 (簡化後) ---
-        const itemsCollectionRef = collection(db, `auction_items`);
-        const groupsCollectionRef = collection(db, `auction_groups`);
-
-        // --- 全局變數和靜態數據 ---
-        const valuesData = [
-            "世界和平", "成熟的愛", "有能力的", "有責任感", "有野心的", "自由", "自尊", 
-            "刺激的生活", "忠誠", "社會權力", "家庭安全", "忠於國家", "真誠的友誼", 
-            "虔誠", "健康", "接受生活命運安排", "率性而為", "富有", "尊重傳統", "愉快", 
-            "智慧、知識", "對世事的抽離", "維持形象、顧全面子", "獨立", "權威"
-        ];
-        let currentGroup = { name: '', budget: 1000 };
-        let unsubscribeItems; // 用於取消監聽
-        let activeItemId = null; // 當前正在出價的物品ID
-
         // --- DOM 元素 ---
         const loginScreen = document.getElementById('login-screen');
         const gameContainer = document.getElementById('game-container');
@@ -170,8 +138,61 @@
                 toastEl.classList.add('toast-hide');
             }, 3000);
         }
-        
-        // (修正) 只建立拍賣品的函式
+
+        // --- Firebase 初始化 & 程式啟動 ---
+        let db, auth;
+        let itemsCollectionRef, groupsCollectionRef;
+
+        try {
+            // =======================================================================
+            // ====================== !!! 最重要的一步 !!! =========================
+            // =======================================================================
+            //
+            // 請將下面 `const firebaseConfig = { ... };` 這一整段程式碼，
+            // 完整地換成你在 Firebase 專案設定中複製的那一段。
+            //
+            // 你要複製的內容，應該包含 `apiKey`, `authDomain`, `projectId` 等所有項目。
+            //
+            // =======================================================================
+            const firebaseConfig = {
+              /* 請在這裡貼上你從 Firebase 網站複製的完整設定物件，
+                 它應該看起來像這樣：
+                 apiKey: "AIzaSy...",
+                 authDomain: "valuegame123.firebaseapp.com",
+                 projectId: "valuegame123",
+                 ... 等等
+              */
+            };
+            // =======================================================================
+
+            
+            // 初始化 Firebase
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // 初始化成功後，定義數據庫路徑並啟動登入流程
+            itemsCollectionRef = collection(db, `auction_items`);
+            groupsCollectionRef = collection(db, `auction_groups`);
+            firebaseSignIn();
+
+        } catch (error) {
+            console.error("Firebase 初始化失敗:", error);
+            showToast("Firebase 配置錯誤，請檢查 config 物件是否已正確貼上！");
+            joinBtn.textContent = '配置錯誤';
+        }
+
+        // --- 全局變數和靜態數據 ---
+        const valuesData = [
+            "世界和平", "成熟的愛", "有能力的", "有責任感", "有野心的", "自由", "自尊", 
+            "刺激的生活", "忠誠", "社會權力", "家庭安全", "忠於國家", "真誠的友誼", 
+            "虔誠", "健康", "接受生活命運安排", "率性而為", "富有", "尊重傳統", "愉快", 
+            "智慧、知識", "對世事的抽離", "維持形象、顧全面子", "獨立", "權威"
+        ];
+        let currentGroup = { name: '', budget: 1000 };
+        let unsubscribeItems; // 用於取消監聽
+        let activeItemId = null; // 當前正在出價的物品ID
+
         async function createInitialItems() {
             console.log("拍賣品不存在，正在自動初始化...");
             const batch = writeBatch(db);
@@ -183,9 +204,7 @@
             console.log("初始化完成!");
         }
 
-        // (修正) 只供重設按鈕使用的完整重設函式
         async function resetGame() {
-            // 1. 重設/建立所有拍賣品
             const itemsBatch = writeBatch(db);
             valuesData.forEach(name => {
                 const itemRef = doc(itemsCollectionRef, name);
@@ -193,7 +212,6 @@
             });
             await itemsBatch.commit();
             
-            // 2. 刪除所有舊組別
             const groupsSnapshot = await getDocs(groupsCollectionRef);
             const deleteBatch = writeBatch(db);
             groupsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
@@ -210,7 +228,6 @@
             }
             currentGroup.name = groupName;
 
-            // (修正) 自動檢查並只建立拍賣品 (如果不存在)
             const itemsSnapshot = await getDocs(itemsCollectionRef);
             if (itemsSnapshot.empty) {
                 await createInitialItems();
@@ -394,7 +411,7 @@
         joinBtn.addEventListener('click', joinGame);
         resetBtn.addEventListener('click', () => {
             if (confirm('警告：這將會清除所有拍賣數據，並重設所有組別的預算。確定要繼續嗎？')) {
-                resetGame(); // (修正) 呼叫新的重設函式
+                resetGame();
             }
         });
         document.getElementById('place-bid-btn').addEventListener('click', placeBid);
@@ -404,6 +421,10 @@
 
         // --- Firebase 登入 ---
         async function firebaseSignIn() {
+            if (!auth) {
+                console.error("Firebase Auth 物件尚未初始化，可能是 config 錯誤。");
+                return;
+            }
             try {
                 await signInAnonymously(auth);
                 console.log("匿名登入成功!");
@@ -416,11 +437,8 @@
                 joinBtn.textContent = '連線失敗';
             }
         }
-        
-        firebaseSignIn();
 
     </script>
 </body>
 </html>
-
 
